@@ -23,17 +23,16 @@ command shown before anything runs.
 
 ## Install
 
-Not on PyPI yet. From a clone:
-
 ```sh
-uv tool install .            # or: pipx install .
+pipx install lazyalembic          # or: uv tool install lazyalembic
 ```
 
 To read a MySQL or Postgres database, install its driver next to the tool:
 
 ```sh
-uv tool install . --with pymysql             # MySQL
-uv tool install . --with 'psycopg[binary]'   # Postgres
+uv tool install lazyalembic --with pymysql             # MySQL
+uv tool install lazyalembic --with 'psycopg[binary]'   # Postgres
+pipx inject lazyalembic pymysql                         # same, with pipx
 ```
 
 Needs Python 3.10 or newer. Tested on macOS and Linux.
