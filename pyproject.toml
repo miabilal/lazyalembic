@@ -1,16 +1,40 @@
 [project]
 name = "lazyalembic"
 version = "0.1.0"
-description = "A terminal map of your Alembic migrations: see the chain, where each database is, and spot splits before they break a deploy."
+description = "A terminal UI for Alembic migrations: the chain as a graph, what your database has applied, and which steps are risky on MySQL."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["alembic", "migrations", "sqlalchemy", "tui", "mysql", "flask-migrate"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Database",
+    "Topic :: Software Development",
+]
 authors = [
     { name = "Muhammad Bilal", email = "miabilal035@gmail.com" }
 ]
 requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.20.0",
+    "rich>=13",
+    "sqlalchemy>=2.0",
     "textual>=8.2.8",
 ]
+
+[project.urls]
+Homepage = "https://github.com/miabilal/lazyalembic"
+Issues = "https://github.com/miabilal/lazyalembic/issues"
 
 [project.scripts]
 lazyalembic = "lazyalembic:main"

@@ -2,9 +2,10 @@
 
 import argparse
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
-__version__ = "0.1.0"
+__version__ = version("lazyalembic")
 
 
 def main(argv: list[str] | None = None) -> None:

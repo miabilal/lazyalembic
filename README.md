@@ -1,82 +1,134 @@
 # lazyalembic
 
-A terminal map of your Alembic migrations.
+A terminal UI for Alembic migrations. See the chain as a graph, which
+migrations your database has applied, and which steps would lock a big table
+on MySQL. Upgrade, downgrade and merge from the same screen, with the exact
+command shown before anything runs.
 
-```sh
-lazyalembic                      # in your project folder
-lazyalembic path/to/project      # or a migrations folder, or an alembic.ini
+```
+ Database 127.0.0.1/shop is on c3d5e4f6a7b8 · 2 migrations not applied yet
+ ⚠ The chain has split into 2 ends:
+     d4e6f5a7b8c9  Add brand slug to products
+     e5f7a6b8c9d0  Make orders.notes TEXT
+ Upgrading to "head" fails until they are joined by a merge migration.
+ ──────────────────────────────────────────────────────────────────────────
+            DB  MySQL risk     Revision      Date        Message
+ ●    head  ·   slow           d4e6f5a7b8c9  2026-10-01  Add brand slug to products
+ │ ●  head  ·   blocks writes  e5f7a6b8c9d0  2026-10-02  Make orders.notes TEXT
+ ●─╯  split ✓                  c3d5e4f6a7b8  2026-09-12  Add gift wrap to orders
+ ●          ✓                  b2e4d3c5f6a7  2026-09-05  Create orders
+ ●    first ✓                  a1f3c2d4e5b6  2026-09-01  Create products
+ u Upgrade to here  d Downgrade to here  m Join ends  r Refresh  q Quit
 ```
 
-- See your migration chain at a glance, newest first, with heads, splits
-  and merges marked
-- Migration files are read, never run: works even when they import app code
-  that isn't installed, and opening someone else's repo can't run its code
-- See which migrations your database has applied (✓) and which it hasn't (·)
+## Install
 
-The database is read once, with a single SELECT from `alembic_version`. It
-comes from `--db URL`, else `$LAZYALEMBIC_DATABASE_URL`, else `sqlalchemy.url`
-in alembic.ini. Passwords are never shown. MySQL and Postgres need their
-driver installed next to the tool, e.g. `uv tool install lazyalembic --with pymysql`.
+Not on PyPI yet. From a clone:
 
-- A split chain ("multiple heads") is called out before it breaks a deploy
-- Change the database from the map, seeing the exact command first:
-  - `u` upgrade to the selected migration
-  - `d` downgrade to the selected migration
-  - `m` join a split chain with a merge migration
-  - `r` re-read the files and the database
+```sh
+uv tool install .            # or: pipx install .
+```
 
-Changes run your project's own command in your project's folder and
-virtualenv: `flask db …` for Flask-Migrate projects, `alembic …` otherwise.
-Every change shows the command and asks first. Upgrades and downgrades only
-run on a database on this computer, and only after the project's own
-`current` command agrees with lazyalembic about which migration that
-database is on, so a project configured for another database is caught
-before anything runs.
+To read a MySQL or Postgres database, install its driver next to the tool:
 
-On MySQL projects, each migration's `upgrade()` is checked for steps that
-are risky on a big table, with a plain-English reason and a safer way:
-blocks writes (MySQL copies the table: column type changes, foreign keys,
-FULLTEXT indexes, dropping a primary key…), deletes data (dropped columns
-and tables), rebuilds table (NULL / NOT NULL changes, new primary keys),
-check SQL (raw `ALTER TABLE`), and slow (index builds, big `UPDATE`s). The
-upgrade confirm box lists the serious ones before anything runs. Rules
-follow the MySQL 8.0 manual's online DDL tables and assume MySQL 8.0+ with
-utf8mb4. Tables created in the same migration are empty and skipped. Only
-operations written directly in `upgrade()` are checked, not ones inside
-helper functions it calls.
+```sh
+uv tool install . --with pymysql             # MySQL
+uv tool install . --with 'psycopg[binary]'   # Postgres
+```
 
-Planned:
+Needs Python 3.10 or newer. Tested on macOS; Linux should work; Windows is
+untested.
 
-- See which migration staging and live are on, too
+## Use
 
-> Early days: everything above "Planned" works; the rest is still to come.
+Run it in your project folder, or point it at one:
+
+```sh
+lazyalembic
+lazyalembic path/to/project          # a project folder, migrations folder or alembic.ini
+lazyalembic --db mysql+pymysql://root@127.0.0.1/shop
+```
+
+Plain Alembic and Flask-Migrate layouts are both found.
+
+| Key | Does |
+| --- | --- |
+| ↑ ↓ | move between migrations |
+| u | upgrade the database to the selected migration |
+| d | downgrade the database to the selected migration |
+| m | merge the heads of a split chain into one |
+| r | re-read the migration files and the database |
+| q | quit |
+
+## What it shows
+
+**The chain.** Newest first, drawn like `git log --graph`, with heads,
+splits, merges and the first migration marked. More than one head gets a
+warning at the top, since `alembic upgrade head` fails until they're merged.
+
+**The database.** The DB column marks applied migrations ✓ and pending ones
+·. The database is read with a single `SELECT` from `alembic_version`, from
+the first of these that is set:
+
+1. `--db URL`
+2. `$LAZYALEMBIC_DATABASE_URL`
+3. `sqlalchemy.url` in alembic.ini
+
+Passwords are never shown. A missing SQLite file is reported, not created.
+
+**MySQL risks.** On MySQL projects each migration's `upgrade()` is checked
+against the MySQL 8.0 manual's online DDL tables. Select a row to see the
+reason and a safer way to do it.
+
+| Label | Examples |
+| --- | --- |
+| blocks writes | changing a column's type, adding a foreign key, FULLTEXT index, dropping the primary key: MySQL copies the table and writes wait |
+| deletes data | dropping a column or table |
+| rebuilds | making a column NULL or NOT NULL, adding a primary key |
+| check SQL | raw `ALTER TABLE` in `op.execute` |
+| slow | building an index, `UPDATE`/`DELETE` in one statement |
+
+Growing a `VARCHAR` stays in place unless it crosses 255 bytes, and
+appending `ENUM` values is instant; both are recognised when `existing_type`
+is given. Steps on a table created in the same migration are skipped, since
+it's empty. The checks are on when the database is MySQL or MariaDB, or,
+with no database set, when the migrations use MySQL-specific features.
+
+## Changing the database
+
+`u`, `d` and `m` run your project's own command in its folder and
+virtualenv: `flask db upgrade …` for Flask-Migrate projects, `alembic -c
+alembic.ini upgrade …` otherwise. A confirm box lists what will be applied
+or undone, any serious MySQL risks, and the exact command.
+
+Because that command uses your project's own database settings, upgrade and
+downgrade only run when:
+
+- the database lazyalembic is showing is on this computer, and
+- your project's own `current` command reports the same revision.
+
+If they disagree, nothing runs. Merging only writes a new migration file.
+
+## Limitations
+
+- Migration files are read, never imported, so `revision` and
+  `down_revision` must be plain values.
+- MySQL rules assume MySQL 8.0+ with utf8mb4. Only operations written
+  directly in `upgrade()` are checked, not ones inside helper functions.
+- `script_location` in `package:path` form isn't supported.
 
 ## Development
 
 ```sh
-uv sync                         # install dependencies
-uv run lazyalembic playground   # open the app on the practice project (q to quit)
-uv run pytest                   # run the tests
+uv sync
+uv run lazyalembic playground    # practice project with a split chain
+uv run pytest
+uv tool install --editable .     # use your working copy as the lazyalembic command
 ```
 
-To use the `lazyalembic` command from any folder while developing, install it
-in editable mode (code changes apply without reinstalling):
+`playground/` is a small SQLite-backed Alembic project. Two of its
+migrations build on the same parent, so its chain has two heads.
 
-```sh
-uv tool install --editable .
-uv tool update-shell            # once, if ~/.local/bin isn't on your PATH
-```
+## License
 
-## Playground
-
-`playground/` is a small practice Alembic project backed by SQLite, so the
-tool can be tried without touching a real database. Its chain splits on
-purpose: two migrations both build on "add gift wrap to orders", the way it
-happens when two developers branch at the same time.
-
-```sh
-uv run alembic -c playground/alembic.ini heads     # shows the two heads
-uv run alembic -c playground/alembic.ini upgrade heads
-```
-
-The SQLite file it creates (`playground/playground.db`) is git-ignored.
+MIT

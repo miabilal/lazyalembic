@@ -62,8 +62,8 @@ def test_bad_url_is_explained():
 
 
 def test_label_never_shows_user_or_password():
-    url = make_url("mysql+pymysql://mia:s3cret@127.0.0.1:3306/nysmah_db")
-    assert describe(url) == "127.0.0.1/nysmah_db"
+    url = make_url("mysql+pymysql://app:s3cret@127.0.0.1:3306/shop")
+    assert describe(url) == "127.0.0.1/shop"
 
 
 
