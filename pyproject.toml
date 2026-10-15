@@ -1,0 +1,30 @@
+[project]
+name = "lazyalembic"
+version = "0.1.0"
+description = "A terminal map of your Alembic migrations: see the chain, where each database is, and spot splits before they break a deploy."
+readme = "README.md"
+authors = [
+    { name = "Muhammad Bilal", email = "miabilal035@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "alembic>=1.20.0",
+    "textual>=8.2.8",
+]
+
+[project.scripts]
+lazyalembic = "lazyalembic:main"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
