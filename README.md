@@ -36,8 +36,7 @@ uv tool install . --with pymysql             # MySQL
 uv tool install . --with 'psycopg[binary]'   # Postgres
 ```
 
-Needs Python 3.10 or newer. Tested on macOS; Linux should work; Windows is
-untested.
+Needs Python 3.10 or newer. Tested on macOS and Linux; Windows is untested.
 
 ## Use
 
